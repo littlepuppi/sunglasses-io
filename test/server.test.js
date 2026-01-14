@@ -1,14 +1,39 @@
-const chai = require('chai');
-const chaiHttp = require('chai-http');
-const server = require('../app/server'); // Adjust the path as needed
+import chai from "chai";
+import chaiHttp from "chai-http";
+import app from "../app/app.js";
 
-const should = chai.should();
 chai.use(chaiHttp);
+const { expect } = chai;
 
-// TODO: Write tests for the server
+/* Server health */
+describe("Server", () => {
+  it("responds to health check", async () => {
+    const res = await chai.request(app).get("/");
+    expect(res).to.have.status(200);
+  });
+});
 
-describe('Brands', () => {});
+/* Brands */
+describe("Brands", () => {
+  it("returns a list of brands", async () => {
+    const res = await chai.request(app).get("/api/brands");
+    expect(res).to.have.status(200);
+    expect(res.body).to.be.an("array");
+  });
+});
 
-describe('Login', () => {});
+/* Login */
+describe("Login", () => {
+  it("fails when credentials are missing", async () => {
+    const res = await chai.request(app).post("/api/login");
+    expect(res).to.have.status(400);
+  });
+});
 
-describe('Cart', () => {});
+/* Cart */
+describe("Cart", () => {
+  it("rejects unauthenticated access", async () => {
+    const res = await chai.request(app).post("/api/cart");
+    expect(res).to.have.status(401);
+  });
+});

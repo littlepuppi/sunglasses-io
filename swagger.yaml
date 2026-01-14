@@ -1,11 +1,160 @@
-swagger: '2.0'
+openapi: 3.0.0
 info:
-    version: '1.0.0'
-    title: 'E-Commerce API'
-    description: 'API for managing brands, products, and user cart'
-host: 'localhost:3000'
-schemes:
-    - 'http'
-basePath: '/api'
-produces:
-    - 'application/json'
+  title: Sunglasses Store API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /brands:
+    get:
+      summary: Get all brands
+      responses:
+        200:
+          description: List of brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brand'
+
+  /brands/{brandId}/products:
+    get:
+      summary: Get products by brand
+      parameters:
+        - name: brandId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Products for brand
+        404:
+          description: Brand not found
+
+  /products/{productId}:
+    get:
+      summary: Get product details
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Product details
+        404:
+          description: Product not found
+
+  /auth/login:
+    post:
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        200:
+          description: Logged in
+        401:
+          description: Invalid credentials
+
+  /cart:
+    get:
+      summary: Get cart
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: User cart
+        401:
+          description: Not authenticated
+
+  /cart/items:
+    post:
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItem'
+      responses:
+        201:
+          description: Item added
+        401:
+          description: Not authenticated
+        404:
+          description: Product not found
+
+  /cart/items/{itemId}:
+    delete:
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Item removed
+        401:
+          description: Not authenticated
+        404:
+          description: Item not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Brand:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+        brandId:
+          type: string
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AddCartItem:
+      type: object
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+

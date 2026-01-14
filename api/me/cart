@@ -1,0 +1,16 @@
+/* Cart (auth required placeholder) */
+app.get("/api/cart", (req, res) => {
+  res.status(401).json({ error: "Unauthorized" });
+});
+
+app.post("/api/cart", (req, res) => {
+  res.status(401).json({ error: "Unauthorized" });
+});
+
+app.delete("/api/cart/:productId", (req, res) => {
+  res.status(401).json({ error: "Unauthorized" });
+});
+
+app.post("/api/cart/:productId", (req, res) => {
+  res.status(401).json({ error: "Unauthorized" });
+});

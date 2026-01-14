@@ -1,0 +1,12 @@
+app.get('/api/brands', (req, res) => {
+  res.json(brands);
+});
+
+app.get('/api/brands/:id/products', (req, res) => {
+  const brand = brands.find(b => b.id === req.params.id);
+  if (!brand) {
+    return res.status(404).json({ error: 'Brand not found' });
+  }
+  const brandProducts = products.filter(p => p.brandId === brand.id);
+  res.json(brandProducts);
+});
