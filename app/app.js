@@ -1,4 +1,4 @@
-import express from "express";
+const express = require('express');
 
 const app = express();
 app.use(express.json());
@@ -8,6 +8,10 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/brands", (req, res) => {
+  res.status(200).json([]);
+});
+
+app.get("/api/products", (req, res) => {
   res.status(200).json([]);
 });
 
@@ -31,4 +35,4 @@ app.post("/api/me/cart/:productId", (req, res) => {
   res.status(401).json({ error: "Unauthorized" });
 });
 
-export default app;
+module.exports = app;
