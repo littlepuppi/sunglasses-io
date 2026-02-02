@@ -1,3 +1,3 @@
 app.get("/api/products", (req, res) => {
-  res.status(200).json([]);
+  res.json(products);
 });

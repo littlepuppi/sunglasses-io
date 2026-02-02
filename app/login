@@ -1,3 +1,22 @@
 app.post("/api/login", (req, res) => {
-  res.status(400).json({ error: "Missing credentials" });
+  const { email, password, username } = req.body;
+  const loginEmail = email || username; // Support both email and username for login
+
+  if(!loginEmail || !password) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
+
+  const user = users.find(
+    (u) => u.email === loginEmail && u.password === password // Changed: email -> loginEmail
+  );
+
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  // Return proper JWT token (use jsonwebtoken package)
+  res.status(200).json({ 
+    token: "fake-jwt-token",
+    user: { id: user.id, email: user.email }
+   });
 });

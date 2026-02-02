@@ -1,0 +1,185 @@
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+import cors from 'cors';
+
+const app = express();
+const PORT = process.env.PORT || 3001;  // Changed to 3001
+
+// Load Swagger
+const swaggerDocument = YAML.load('./swagger.yaml');
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// 🔐 Auth middleware
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  if (token !== "fake-jwt-token") {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  req.user = { id: "user-1", email: "test@test.com" };
+  next();
+}
+
+// In-memory data
+const users = [
+  { id: "u1", email: "test@test.com", password: "password" }
+];
+
+const brands = [
+  { id: "b1", name: "Ray-Ban" },
+  { id: "b2", name: "Oakley" }
+];
+
+const products = [
+  { id: "p1", name: "Aviator", price: 150, brandId: "b1", imageUrl: "/images/aviator.jpg" },
+  { id: "p2", name: "Wayfarer", price: 120, brandId: "b1", imageUrl: "/images/wayfarer.jpg" },
+  { id: "p3", name: "Holbrook", price: 180, brandId: "b2", imageUrl: "/images/holbrook.jpg" }
+];
+
+// Per-user carts
+const carts = {};
+
+// PUBLIC ROUTES
+app.get('/api/brands', (req, res) => {
+  res.status(200).json(brands);
+});
+
+app.get('/api/brands/:brandId/products', (req, res) => {
+  const { brandId } = req.params;
+  const brandProducts = products.filter(p => p.brandId === brandId);
+  
+  if (brandProducts.length === 0) {
+    return res.status(404).json({ error: 'Brand not found' });
+  }
+  
+  res.json(brandProducts);
+});
+
+app.get('/api/products', (req, res) => {
+  res.status(200).json(products);
+});
+
+app.get('/api/products/:productId', (req, res) => {
+  const product = products.find(p => p.id === req.params.productId);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  res.json(product);
+});
+
+app.post('/api/login', (req, res) => {
+  const { email, password, username } = req.body;
+  const loginEmail = email || username;
+  
+  if (!loginEmail || !password) {
+    return res.status(400).json({ error: 'Missing credentials' });
+  }
+  
+  const user = users.find(u => u.email === loginEmail && u.password === password);
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  res.status(200).json({ token: 'fake-jwt-token', userId: user.id });
+});
+
+// CART ROUTES (AUTH REQUIRED)
+app.get('/api/me/cart', requireAuth, (req, res) => {
+  const userCart = carts[req.user.id] || { items: [], totalPrice: 0 };
+  res.status(200).json(userCart.items || []);
+});
+
+app.post('/api/me/cart', requireAuth, (req, res) => {
+  const { productId, quantity = 1 } = req.body;
+  
+  const product = products.find(p => p.id === productId);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  
+  if (!carts[req.user.id]) {
+    carts[req.user.id] = { items: [] };
+  }
+  
+  const existingItem = carts[req.user.id].items.find(item => item.productId === productId);
+  
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    carts[req.user.id].items.push({
+      id: `item-${Date.now()}`,
+      productId,
+      name: product.name,
+      price: product.price,
+      quantity
+    });
+  }
+  
+  res.status(201).json(carts[req.user.id]);
+});
+
+app.patch('/api/me/cart/:productId', requireAuth, (req, res) => {
+  const { quantity } = req.body;
+  const { productId } = req.params;
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ error: "Invalid quantity" });
+  }
+
+  const userCart = carts[req.user.id];
+  if (!userCart) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+
+  const item = userCart.items.find(i => i.productId === productId);
+  if (!item) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+
+  item.quantity = quantity;
+  res.status(200).json({ message: 'Quantity updated', item });
+});
+
+app.delete('/api/me/cart/:productId', requireAuth, (req, res) => {
+  const { productId } = req.params;
+  
+  const userCart = carts[req.user.id];
+  if (!userCart) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+  
+  const index = userCart.items.findIndex(i => i.productId === productId);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+  
+  userCart.items.splice(index, 1);
+  res.status(204).send();
+});
+
+// Error handler (keep this LAST)
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something broke!' });
+});
+
+// Start server
+const server = app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+});
+
+export default app;

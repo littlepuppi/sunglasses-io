@@ -1,0 +1,9 @@
+get:
+    tags: [Products]
+    summary: Get product details
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string

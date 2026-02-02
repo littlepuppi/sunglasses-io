@@ -1,0 +1,6 @@
+get:
+    tags: [Brands]
+    summary: Get all brands
+    responses:
+      200:
+        description: List of brands

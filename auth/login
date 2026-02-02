@@ -1,0 +1,5 @@
+post:
+    tags: [Auth]
+    summary: Log in
+    requestBody:
+      required: true
