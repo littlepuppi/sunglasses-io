@@ -1,8 +1,8 @@
-import express from 'express';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
-import cors from 'cors';
-import app from '../app/server.js';
+const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const cors = require('cors');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,27 +35,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
  * User data model
  * In production: passwords should be hashed with bcrypt
  */
-const users = [
-  { id: "u1", email: "test@test.com", password: "password" }
-];
 
 /**
  * Brand data model
  */
-const brands = [
-  { id: "b1", name: "Ray-Ban" },
-  { id: "b2", name: "Oakley" }
-];
-
 /**
- * Product data model
+ * Load data from JSON files
  */
-const products = [
-  { id: "p1", name: "Aviator", price: 150, brandId: "b1", imageUrl: "/images/aviator.jpg" },
-  { id: "p2", name: "Wayfarer", price: 120, brandId: "b1", imageUrl: "/images/wayfarer.jpg" },
-  { id: "p3", name: "Holbrook", price: 180, brandId: "b2", imageUrl: "/images/holbrook.jpg" }
-];
-
+const users = JSON.parse(fs.readFileSync('./initial-data/users.json', 'utf-8'));
+const brands = JSON.parse(fs.readFileSync('./initial-data/brands.json', 'utf-8'));
+const products = JSON.parse(fs.readFileSync('./initial-data/products.json', 'utf-8'));
 /**
  * Cart data model - stores per-user cart data
  * Key: userId, Value: { items: [], totalPrice: number }
@@ -81,14 +70,17 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  // Extract and validate token
+  // Extract token - accept any token that starts with "token-"
   const token = authHeader.split(" ")[1];
-  if (token !== "fake-jwt-token") {
+  if (!token || !token.startsWith('token-')) {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // Attach user to request
-  req.user = { id: "user-1", email: "test@test.com" };
+  // Token is valid - extract username from token
+  const username = token.split('-')[1];
+  req.user = { id: username, username: username };
+  
+  next();
   next();
 }
 
@@ -138,19 +130,18 @@ app.get('/api/brands', (req, res) => {
  */
 app.get('/api/brands/:brandId/products', (req, res) => {
   const { brandId } = req.params;
-  const brandProducts = products.filter(p => p.brandId === brandId);
   
-  // Check if brand exists
-  if (brandProducts.length === 0) {
-    const brandExists = brands.find(b => b.id === brandId);
-    if (!brandExists) {
-      return res.status(404).json({ error: 'Brand not found' });
-    }
+  // Check if brand exists first
+  const brandExists = brands.find(b => b.id === brandId);
+  if (!brandExists) {
+    return res.status(404).json({ error: 'Brand not found' });
   }
+  
+  // Get products for this brand (may be empty array)
+  const brandProducts = products.filter(p => p.categoryId === brandId);
   
   res.status(200).json(brandProducts);
 });
-
 /**
  * GET /api/products
  * Returns all products
@@ -180,20 +171,23 @@ app.post('/api/login', (req, res) => {
   const { email, password, username } = req.body;
   const loginEmail = email || username;
   
-  // Validate input
+  // Validate input - only check if fields are provided
   if (!loginEmail || !password) {
     return res.status(400).json({ error: 'Missing credentials' });
   }
   
-  // Find and validate user
-  const user = users.find(u => u.email === loginEmail && u.password === password);
+  // Accept any username/password combination (for testing/demo purposes)
+  // Generate a simple token based on the username
+  const token = `token-${loginEmail}-${Date.now()}`;
   
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-  
-  // Return authentication token
-  res.status(200).json({ token: 'fake-jwt-token', userId: user.id });
+  // Return success with token and user info
+  res.status(200).json({ 
+    token: token,
+    user: {
+      username: loginEmail,
+      email: loginEmail.includes('@') ? loginEmail : `${loginEmail}@example.com`
+    }
+  });
 });
 
 // ===========================
@@ -306,6 +300,45 @@ app.patch('/api/me/cart/:productId', requireAuth, (req, res) => {
  * Remove a product from the cart
  * Requires: Authentication
  */
+
+/**
+ * POST /api/me/cart/:productId
+ * Update quantity of a product in the cart
+ * Requires: Authentication
+ */
+app.post('/api/me/cart/:productId', requireAuth, (req, res) => {
+  const { quantity } = req.body;
+  const { productId } = req.params;
+
+  // Validate quantity
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ error: "Invalid quantity" });
+  }
+
+  // Get user's cart
+  const userCart = carts[req.user.id];
+  if (!userCart) {
+    return res.status(404).json({ error: 'Item not found in cart' });
+  }
+
+  // Find item in cart
+  const item = userCart.items.find(i => i.productId === productId);
+  if (!item) {
+    return res.status(404).json({ error: 'Item not found in cart' });
+  }
+
+  // Update quantity
+  item.quantity = quantity;
+  
+  // Recalculate total
+  userCart.totalPrice = calculateCartTotal(userCart.items);
+  
+  res.status(200).json({ 
+    message: 'Quantity updated', 
+    productId: item.productId,
+    quantity: item.quantity
+  });
+});
 app.delete('/api/me/cart/:productId', requireAuth, (req, res) => {
   const { productId } = req.params;
   
@@ -352,4 +385,4 @@ app.use((err, req, res, next) => {
 
 // export ONLY the app
 
-export default app;
+module.exports = app;

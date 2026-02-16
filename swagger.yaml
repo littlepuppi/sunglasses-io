@@ -1,189 +1,68 @@
 openapi: 3.0.0
 info:
-  title: Sunglasses Shop API
-  description: E-commerce API for sunglasses with authentication and cart management
+  title: Sunglasses E-Commerce API
+  description: API for browsing and purchasing sunglasses by brand
   version: 1.0.0
+  contact:
+    name: API Support
+    email: support@sunglasses.com
 
 servers:
-  - url: http://localhost:3001
+  - url: http://localhost:3000
     description: Development server
 
 tags:
-  - name: Authentication
-    description: User authentication endpoints
-  - name: Brands
-    description: Sunglasses brand management
-  - name: Products
-    description: Product catalog
-  - name: Cart
-    description: Shopping cart management
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT token obtained from /api/login
-
-  schemas:
-    Brand:
-      type: object
-      properties:
-        id:
-          type: string
-          example: "b1"
-        name:
-          type: string
-          example: "Ray-Ban"
-
-    Product:
-      type: object
-      properties:
-        id:
-          type: string
-          example: "p1"
-        name:
-          type: string
-          example: "Aviator"
-        price:
-          type: number
-          example: 150
-        brandId:
-          type: string
-          example: "b1"
-        imageUrl:
-          type: string
-          example: "/images/aviator.jpg"
-
-    CartItem:
-      type: object
-      properties:
-        id:
-          type: string
-          example: "item-123"
-        productId:
-          type: string
-          example: "p1"
-        name:
-          type: string
-          example: "Aviator"
-        price:
-          type: number
-          example: 150
-        quantity:
-          type: integer
-          example: 2
-
-    Cart:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/CartItem'
-        totalPrice:
-          type: number
-          example: 300
-
-    LoginRequest:
-      type: object
-      required:
-        - password
-      properties:
-        email:
-          type: string
-          example: "test@test.com"
-        username:
-          type: string
-          example: "test@test.com"
-        password:
-          type: string
-          example: "password"
-
-    LoginResponse:
-      type: object
-      properties:
-        token:
-          type: string
-          example: "fake-jwt-token"
-        userId:
-          type: string
-          example: "u1"
-
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-          example: "Error message"
+  - name: brands
+    description: Operations related to sunglasses brands
+  - name: products
+    description: Operations related to sunglasses products
+  - name: auth
+    description: Authentication operations
+  - name: cart
+    description: Shopping cart operations (requires authentication)
 
 paths:
-  /api/login:
-    post:
-      tags:
-        - Authentication
-      summary: User login
-      description: Authenticate user and receive JWT token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '400':
-          description: Missing credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /api/brands:
     get:
       tags:
-        - Brands
+        - brands
       summary: Get all brands
-      description: Returns a list of all sunglasses brands
+      description: Retrieves a list of all available sunglasses brands
+      operationId: getBrands
       responses:
         '200':
-          description: Successful response
+          description: Successful operation
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Brand'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /api/brands/{brandId}/products:
+  /api/brands/{id}/products:
     get:
       tags:
-        - Brands
+        - brands
+        - products
       summary: Get products by brand
-      description: Returns all products for a specific brand
+      description: Retrieves all products for a specific brand
+      operationId: getProductsByBrand
       parameters:
-        - name: brandId
+        - name: id
           in: path
           required: true
           description: Brand ID
           schema:
             type: string
-            example: "b1"
       responses:
         '200':
-          description: Successful response
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -196,46 +75,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/products:
     get:
       tags:
-        - Products
+        - products
       summary: Get all products
-      description: Returns a list of all products
+      description: Retrieves all available sunglasses products across all brands
+      operationId: getProducts
+      parameters:
+        - name: query
+          in: query
+          required: false
+          description: Search query to filter products
+          schema:
+            type: string
       responses:
         '200':
-          description: Successful response
+          description: Successful operation
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Product'
-
-  /api/products/{productId}:
-    get:
-      tags:
-        - Products
-      summary: Get product by ID
-      description: Returns a single product
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          description: Product ID
-          schema:
-            type: string
-            example: "p1"
-      responses:
-        '200':
-          description: Successful response
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Product'
-        '404':
-          description: Product not found
+                $ref: '#/components/schemas/Error'
+
+  /api/login:
+    post:
+      tags:
+        - auth
+      summary: User login
+      description: Accepts any username and password combination and returns an access token (for testing/demo purposes - no actual validation performed)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login (accepts any credentials for testing/demo purposes)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request (missing username or password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -244,65 +148,61 @@ paths:
   /api/me/cart:
     get:
       tags:
-        - Cart
+        - cart
       summary: Get user's cart
-      description: Returns the current user's shopping cart
+      description: Retrieves the current user's shopping cart
+      operationId: getCart
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
-          description: Successful response
+          description: Successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CartItem'
+                $ref: '#/components/schemas/Cart'
         '401':
-          description: Unauthorized
+          description: Unauthorized - user not logged in
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
     post:
       tags:
-        - Cart
-      summary: Add item to cart
-      description: Add a product to the user's cart
+        - cart
+      summary: Add product to cart
+      description: Adds a new product to the user's shopping cart
+      operationId: addToCart
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - productId
-              properties:
-                productId:
-                  type: string
-                  example: "p1"
-                quantity:
-                  type: integer
-                  example: 1
-                  default: 1
+              $ref: '#/components/schemas/AddToCartRequest'
       responses:
-        '201':
-          description: Item added successfully
+        '200':
+          description: Product added to cart successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
         '400':
-          description: Invalid request
+          description: Invalid request (missing productId or invalid quantity)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized - user not logged in
           content:
             application/json:
               schema:
@@ -313,15 +213,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/me/cart/{productId}:
-    patch:
+    post:
       tags:
-        - Cart
+        - cart
       summary: Update product quantity in cart
-      description: Update the quantity of a specific product in the cart
+      description: Updates the quantity of a specific product in the user's cart
+      operationId: updateCartItem
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: productId
           in: path
@@ -329,45 +236,27 @@ paths:
           description: Product ID
           schema:
             type: string
-            example: "p1"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - quantity
-              properties:
-                quantity:
-                  type: integer
-                  example: 5
-                  minimum: 1
+              $ref: '#/components/schemas/UpdateCartItemRequest'
       responses:
         '200':
-          description: Quantity updated successfully
+          description: Cart item updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Quantity updated"
-                  productId:
-                    type: string
-                    example: "p1"
-                  quantity:
-                    type: integer
-                    example: 5
+                $ref: '#/components/schemas/Cart'
         '400':
-          description: Invalid quantity
+          description: Invalid request (missing or invalid quantity)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized - user not logged in
           content:
             application/json:
               schema:
@@ -378,14 +267,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
     delete:
       tags:
-        - Cart
+        - cart
       summary: Remove product from cart
-      description: Remove a specific product from the cart
+      description: Removes a specific product from the user's shopping cart
+      operationId: removeFromCart
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: productId
           in: path
@@ -393,12 +289,15 @@ paths:
           description: Product ID to remove
           schema:
             type: string
-            example: "p1"
       responses:
-        '204':
-          description: Product removed successfully
+        '200':
+          description: Product removed from cart successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
         '401':
-          description: Unauthorized
+          description: Unauthorized - user not logged in
           content:
             application/json:
               schema:
@@ -409,3 +308,182 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter your bearer token in the format **Bearer &lt;token&gt;**
+
+  schemas:
+    Brand:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the brand
+          example: "1"
+        name:
+          type: string
+          description: Brand name
+          example: "Ray-Ban"
+        logoUrl:
+          type: string
+          description: URL to the brand's logo image
+          example: "http://localhost:3000/images/brands/rayban-logo.png"
+    
+    Product:
+      type: object
+      required:
+        - id
+        - categoryId
+        - name
+        - price
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the product
+          example: "1"
+        categoryId:
+          type: string
+          description: Brand ID this product belongs to
+          example: "1"
+        name:
+          type: string
+          description: Product name
+          example: "Aviator Classic"
+        description:
+          type: string
+          description: Product description
+          example: "Classic aviator sunglasses with gold frame"
+        price:
+          type: number
+          format: float
+          description: Product price in USD
+          example: 150.00
+        imageUrls:
+          type: array
+          items:
+            type: string
+          description: Array of URLs to product images
+          example: ["http://localhost:3000/images/products/aviator-1.png"]
+    
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: User's username or email
+          example: "greenlion235"
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: "password123"
+    
+    LoginResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: Access token for authenticated requests (generated for any username/password provided)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          description: User data based on provided credentials
+          properties:
+            username:
+              type: string
+              example: "greenlion235"
+            email:
+              type: string
+              format: email
+              example: "user@example.com"
+    
+    CartItem:
+      type: object
+      required:
+        - product
+        - quantity
+      properties:
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of this product in the cart
+          example: 2
+    
+    Cart:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+          description: Array of items in the cart
+        total:
+          type: number
+          format: float
+          description: Total price of all items in the cart
+          example: 300.00
+    
+    AddToCartRequest:
+      type: object
+      required:
+        - productId
+      properties:
+        productId:
+          type: string
+          description: ID of the product to add to cart
+          example: "1"
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Quantity to add (defaults to 1 if not provided)
+          example: 1
+    
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          description: New quantity for the product
+          example: 3
+    
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Product not found"
+        details:
+          type: string
+          description: Additional error details
+          example: "The requested product with id '999' does not exist"
