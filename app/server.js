@@ -4,6 +4,8 @@ const YAML = require('yamljs');
 const cors = require('cors');
 const fs = require('fs');
 
+
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -35,16 +37,27 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
  * User data model
  * In production: passwords should be hashed with bcrypt
  */
+const users = [
+  { id: "u1", email: "test@test.com", password: "password" }
+];
 
 /**
  * Brand data model
  */
+const brands = [
+  { id: "b1", name: "Ray-Ban" },
+  { id: "b2", name: "Oakley" }
+];
+
 /**
- * Load data from JSON files
+ * Product data model
  */
-const users = JSON.parse(fs.readFileSync('./initial-data/users.json', 'utf-8'));
-const brands = JSON.parse(fs.readFileSync('./initial-data/brands.json', 'utf-8'));
-const products = JSON.parse(fs.readFileSync('./initial-data/products.json', 'utf-8'));
+const products = [
+  { id: "p1", name: "Aviator", price: 150, brandId: "b1", imageUrl: "/images/aviator.jpg" },
+  { id: "p2", name: "Wayfarer", price: 120, brandId: "b1", imageUrl: "/images/wayfarer.jpg" },
+  { id: "p3", name: "Holbrook", price: 180, brandId: "b2", imageUrl: "/images/holbrook.jpg" }
+];
+
 /**
  * Cart data model - stores per-user cart data
  * Key: userId, Value: { items: [], totalPrice: number }
@@ -70,17 +83,14 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  // Extract token - accept any token that starts with "token-"
+  // Extract and validate token
   const token = authHeader.split(" ")[1];
-  if (!token || !token.startsWith('token-')) {
+  if (token !== "fake-jwt-token") {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // Token is valid - extract username from token
-  const username = token.split('-')[1];
-  req.user = { id: username, username: username };
-  
-  next();
+  // Attach user to request
+  req.user = { id: "user-1", email: "test@test.com" };
   next();
 }
 
@@ -130,18 +140,19 @@ app.get('/api/brands', (req, res) => {
  */
 app.get('/api/brands/:brandId/products', (req, res) => {
   const { brandId } = req.params;
+  const brandProducts = products.filter(p => p.brandId === brandId);
   
-  // Check if brand exists first
-  const brandExists = brands.find(b => b.id === brandId);
-  if (!brandExists) {
-    return res.status(404).json({ error: 'Brand not found' });
+  // Check if brand exists
+  if (brandProducts.length === 0) {
+    const brandExists = brands.find(b => b.id === brandId);
+    if (!brandExists) {
+      return res.status(404).json({ error: 'Brand not found' });
+    }
   }
-  
-  // Get products for this brand (may be empty array)
-  const brandProducts = products.filter(p => p.categoryId === brandId);
   
   res.status(200).json(brandProducts);
 });
+
 /**
  * GET /api/products
  * Returns all products
@@ -167,6 +178,49 @@ app.get('/api/products/:productId', (req, res) => {
  * Authenticates user and returns JWT token
  * Accepts both 'email' and 'username' fields
  */
+
+/**
+ * POST /api/register
+ * Register a new user account
+ * Public endpoint - no authentication required
+ */
+app.post('/api/register', (req, res) => {
+  const { username, email, password } = req.body;
+  
+  // Validate required fields
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  
+  // Check if user already exists (in a real app, check database)
+  const existingUser = users.find(u => u.username === username || u.email === email);
+  if (existingUser) {
+    return res.status(409).json({ error: 'User already exists' });
+  }
+  
+  // Create new user (in demo mode, just return success)
+  const newUser = {
+    id: `user-${Date.now()}`,
+    username: username,
+    email: email || `${username}@example.com`,
+    password: password // In production, hash this!
+  };
+  
+  // Add to users array (in-memory for demo)
+  users.push(newUser);
+  
+  // Auto-login: return token
+  const token = `token-${username}-${Date.now()}`;
+  
+  res.status(201).json({
+    message: 'User created successfully',
+    token: token,
+    user: {
+      username: newUser.username,
+      email: newUser.email
+    }
+  });
+});
 app.post('/api/login', (req, res) => {
   const { email, password, username } = req.body;
   const loginEmail = email || username;
@@ -300,45 +354,6 @@ app.patch('/api/me/cart/:productId', requireAuth, (req, res) => {
  * Remove a product from the cart
  * Requires: Authentication
  */
-
-/**
- * POST /api/me/cart/:productId
- * Update quantity of a product in the cart
- * Requires: Authentication
- */
-app.post('/api/me/cart/:productId', requireAuth, (req, res) => {
-  const { quantity } = req.body;
-  const { productId } = req.params;
-
-  // Validate quantity
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    return res.status(400).json({ error: "Invalid quantity" });
-  }
-
-  // Get user's cart
-  const userCart = carts[req.user.id];
-  if (!userCart) {
-    return res.status(404).json({ error: 'Item not found in cart' });
-  }
-
-  // Find item in cart
-  const item = userCart.items.find(i => i.productId === productId);
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found in cart' });
-  }
-
-  // Update quantity
-  item.quantity = quantity;
-  
-  // Recalculate total
-  userCart.totalPrice = calculateCartTotal(userCart.items);
-  
-  res.status(200).json({ 
-    message: 'Quantity updated', 
-    productId: item.productId,
-    quantity: item.quantity
-  });
-});
 app.delete('/api/me/cart/:productId', requireAuth, (req, res) => {
   const { productId } = req.params;
   

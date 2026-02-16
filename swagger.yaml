@@ -22,6 +22,79 @@ tags:
     description: Shopping cart operations (requires authentication)
 
 paths:
+  /api/register:
+    post:
+      tags:
+        - auth
+      summary: Register new user
+      description: Create a new user account (demo mode - user persists in memory only)
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: Desired username
+                  example: "johndoe"
+                email:
+                  type: string
+                  format: email
+                  description: Email address (optional, will generate from username if not provided)
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  description: User's password
+                  example: "securepassword123"
+      responses:
+        '201':
+          description: User created successfully, returns token for immediate login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User created successfully"
+                  token:
+                    type: string
+                    example: "token-johndoe-1234567890"
+                  user:
+                    type: object
+                    properties:
+                      username:
+                        type: string
+                        example: "johndoe"
+                      email:
+                        type: string
+                        example: "john@example.com"
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/brands:
     get:
       tags:
