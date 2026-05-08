@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout – Sunglasses Shop</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: bold;
+            opacity: 0.9;
+        }
+
+        .back-link:hover { opacity: 1; text-decoration: underline; }
+
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .checkout-grid { grid-template-columns: 1fr; }
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-item:last-of-type { border-bottom: none; }
+
+        .order-item-name { font-weight: bold; color: #333; }
+        .order-item-qty { color: #999; font-size: 0.9em; }
+        .order-item-price { color: #667eea; font-weight: bold; }
+
+        .order-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #667eea;
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .card-icons { display: flex; gap: 8px; margin-bottom: 10px; }
+
+        .card-icon {
+            padding: 4px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            background: #f9f9f9;
+        }
+
+        .place-order-btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+
+        .place-order-btn:hover { background: #5568d3; }
+        .place-order-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .secure-note {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+
+        /* Success overlay */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-overlay.show { display: flex; }
+
+        .success-box {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .success-icon { font-size: 60px; margin-bottom: 20px; }
+
+        .success-box h2 {
+            color: #28a745;
+            border-bottom: none;
+            font-size: 1.8em;
+        }
+
+        .success-box p { color: #666; margin: 10px 0; }
+
+        .success-box button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .success-box button:hover { background: #5568d3; }
+
+        .not-logged-in {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .not-logged-in a { color: #667eea; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back-link" href="/">← Back to Shop</a>
+        <h1>🕶️ Checkout</h1>
+
+        <div id="notLoggedIn" class="not-logged-in" style="display:none;">
+            You must be logged in to checkout. <a href="/">Go back and login</a>.
+        </div>
+
+        <div class="checkout-grid">
+            <!-- Left column: Order Summary + Shipping -->
+            <div>
+                <!-- Order Summary -->
+                <div class="section">
+                    <h2>Order Summary</h2>
+                    <div id="orderSummary"><div class="empty-state">Loading cart...</div></div>
+                </div>
+
+                <!-- Shipping -->
+                <div class="section">
+                    <h2>Shipping Information</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text" id="firstName" placeholder="Jane">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text" id="lastName" placeholder="Doe">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="jane@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="address" placeholder="123 Main St">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text" id="city" placeholder="Los Angeles">
+                        </div>
+                        <div class="form-group">
+                            <label>ZIP Code</label>
+                            <input type="text" id="zip" placeholder="90001">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <select id="state">
+                            <option value="">Select state...</option>
+                            <option>Alabama</option>
+    <option>Alaska</option>
+    <option>Arizona</option>
+    <option>Arkansas</option>
+    <option>California</option>
+    <option>Colorado</option>
+    <option>Connecticut</option>
+    <option>Delaware</option>
+    <option>Florida</option>
+    <option>Georgia</option>
+    <option>Hawaii</option>
+    <option>Idaho</option>
+    <option>Illinois</option>
+    <option>Indiana</option>
+    <option>Iowa</option>
+    <option>Kansas</option>
+    <option>Kentucky</option>
+    <option>Louisiana</option>
+    <option>Maine</option>
+    <option>Maryland</option>
+    <option>Massachusetts</option>
+    <option>Michigan</option>
+    <option>Minnesota</option>
+    <option>Mississippi</option>
+    <option>Missouri</option>
+    <option>Montana</option>
+    <option>Nebraska</option>
+    <option>Nevada</option>
+    <option>New Hampshire</option>
+    <option>New Jersey</option>
+    <option>New Mexico</option>
+    <option>New York</option>
+    <option>North Carolina</option>
+    <option>North Dakota</option>
+    <option>Ohio</option>
+    <option>Oklahoma</option>
+    <option>Oregon</option>
+    <option>Pennsylvania</option>
+    <option>Rhode Island</option>
+    <option>South Carolina</option>
+    <option>South Dakota</option>
+    <option>Tennessee</option>
+    <option>Texas</option>
+    <option>Utah</option>
+    <option>Vermont</option>
+    <option>Virginia</option>
+    <option>Washington</option>
+    <option>West Virginia</option>
+    <option>Wisconsin</option>
+    <option>Wyoming</option>
+</select>
+                     </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: Payment -->
+            <div>
+                <div class="section">
+                    <h2>Payment</h2>
+                    <div class="card-icons">
+                        <span class="card-icon">VISA</span>
+                        <span class="card-icon">MC</span>
+                        <span class="card-icon">AMEX</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Name on Card</label>
+                        <input type="text" id="cardName" placeholder="Jane Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Card Number</label>
+                        <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Expiry Date</label>
+                            <input type="text" id="expiry" placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label>CVV</label>
+                            <input type="text" id="cvv" placeholder="123" maxlength="3">
+                        </div>
+                    </div>
+
+                    <button class="place-order-btn" onclick="placeOrder()">Place Order</button>
+                    <p class="secure-note">🔒 Your payment info is secure</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-box">
+            <div class="success-icon">✅</div>
+            <h2>Order Placed!</h2>
+            <p>Thanks for your purchase.</p>
+            <p>A confirmation will be sent to your email.</p>
+            <button onclick="window.location.href='/'">Continue Shopping</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        const authToken = localStorage.getItem('authToken');
+
+        // Check login
+        if (!authToken) {
+            document.getElementById('notLoggedIn').style.display = 'block';
+        } else {
+            loadCart();
+        }
+
+        async function loadCart() {
+            try {
+                const response = await fetch(`${API_URL}/api/me/cart`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load cart');
+
+                const cart = await response.json();
+                const items = cart.items || [];
+                const container = document.getElementById('orderSummary');
+
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Your cart is empty</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    div.innerHTML = `
+                        <div>
+                            <div class="order-item-name">${item.name}</div>
+                            <div class="order-item-qty">Qty: ${item.quantity}</div>
+                        </div>
+                        <div class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                const total = document.createElement('div');
+                total.className = 'order-total';
+                total.innerHTML = `<span>Total</span><span>$${cart.totalPrice.toFixed(2)}</span>`;
+                container.appendChild(total);
+
+            } catch (error) {
+                document.getElementById('orderSummary').innerHTML =
+                    `<div class="empty-state">Error loading cart: ${error.message}</div>`;
+            }
+        }
+
+        // Format card number with spaces
+        document.getElementById('cardNumber').addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+        });
+
+        // Format expiry
+        document.getElementById('expiry').addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1/$2');
+        });
+
+        function placeOrder() {
+            const fields = ['firstName', 'lastName', 'email', 'address', 'city', 'zip', 'state', 'cardName', 'cardNumber', 'expiry', 'cvv'];
+            for (const id of fields) {
+                if (!document.getElementById(id).value.trim()) {
+                    alert('Please fill in all fields.');
+                    document.getElementById(id).focus();
+                    return;
+                }
+            }
+            document.getElementById('successOverlay').classList.add('show');
+        }
+    </script>
+</body>
+</html>

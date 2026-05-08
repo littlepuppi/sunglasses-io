@@ -69,6 +69,7 @@ const carts = {};
 // ===========================
 
 /**
+/**
  * Authentication middleware - validates JWT token
  * Attaches user object to request if valid
  * @param {Request} req - Express request object
@@ -83,14 +84,16 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  // Extract and validate token
+  // Extract token - accept any token that starts with "token-"
   const token = authHeader.split(" ")[1];
-  if (token !== "fake-jwt-token") {
+  if (!token || !token.startsWith('token-')) {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // Attach user to request
-  req.user = { id: "user-1", email: "test@test.com" };
+  // Token is valid - extract username from token (format: token-username-timestamp)
+  const username = token.split('-')[1];
+  req.user = { id: username, username: username };
+  
   next();
 }
 
